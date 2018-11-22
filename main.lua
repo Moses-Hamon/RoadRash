@@ -25,9 +25,9 @@ activeScreen = screens.MENU
 player = {}
 player.x = 150
 player.y = 400
-player.h = 50
+player.h = 20
 player.w = 100
-player.speed = 100
+player.speed = 300
 -- Sound button
 soundButton = {x=650, y=400, w=120, h=30, text="Sound OFF"}
 -- scoreboard
@@ -48,6 +48,18 @@ function love.update(dt)
   -- make your game smooth and consistant across al performance.
 -- Created a scrolling background
   scrollbackground(dt)
+  -- Controls the player up and down
+  if activeScreen == screens.GAME then
+    if love.keyboard.isDown("w") and player.y > 200 then
+      player.y = player.y - 1 * player.speed * dt
+    elseif love.keyboard.isDown("s") and player.y < 500 then
+      player.y = player.y + 1 * player.speed * dt
+    end
+  end
+-- scrolls objects across screen --
+  for i, o in pairs(obstacles) do
+    o.x = o.x - 1 * o.speed * dt
+  end
 
 
 end
@@ -67,7 +79,12 @@ function love.draw()
     drawButton()
   end
   if activeScreen == screens.GAME then
+
     drawPLayer(216,10,27)
+-- For drawing the obstacles --
+    for i, o in pairs(obstacles) do
+      love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
+    end
   end
 
 end
@@ -75,15 +92,39 @@ end
 
 -- Keypress events --
 function love.keypressed(key, scancode, isrepeat)
-  if key == "return" then
+  if key == "return" and activeScreen == screens.MENU then
     activeScreen = screens.GAME
     backgroundSpeed = 300
+  end
+  if activeScreen == screens.GAME then
+    gameKeypressed(key)
   end
 end
 -- Mouse Pressed Events --
 function love.mousepressed(x, y, button, isTouch)
   toggleSound(x,y,button)
 end
+
+-- Spawn the obstacle
+function spawnObstacle()
+  obstacle = {}
+  obstacle.x = 0
+  obstacle.y = 0
+  obstacle.h = 15
+  obstacle.w = 60
+  obstacle.speed = love.math.random(350, 600)
+
+  obstacle.y = love.math.random(200, 500)
+  obstacle.x = love.graphics.getWidth() - 120
+
+table.insert(obstacles, obstacle)
+end
+function gameKeypressed(key)
+  if key == "space" then
+    spawnObstacle()
+  end
+end
+
 
 -- toggles sound for the game
 function toggleSound(x,y,button)
@@ -98,6 +139,7 @@ function toggleSound(x,y,button)
     end
   end
 end
+
 
 -- checker for button clicked
 function mouseButtonClick(x,y,button)
