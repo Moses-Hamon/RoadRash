@@ -14,6 +14,7 @@ function love.load(arg)
   testBackGround = {x=0,y=0,h=600,w=800}
   testBackGround2 = {x=800,y=0,h=600,w=800}
   -- Game Music --
+music_scores = love.audio.newSource("bensound_sadday.mp3", "stream")
 music = love.audio.newSource("Shaolin_Dub_Hermes.mp3", "stream")
 -- table for holding all obstacles
 obstacles = {}
@@ -28,13 +29,17 @@ player.y = 400
 player.h = 20
 player.w = 100
 player.speed = 300
+
 -- Sound button
-soundButton = {x=650, y=400, w=120, h=30, text="Sound OFF"}
+soundButton = {x=670, y=10, w=120, h=30, text="Sound ON"}
 -- scoreboard
 scoreboard = ""
+score = 0
 -- initial loading of scores
 read_scores()
-
+music:setVolume(0.5)
+music:play()
+test = "TEST"
 
 end
 ----------------------------------------------------------------------END OF love.LOAD------------------------------------------------------------------
@@ -47,7 +52,9 @@ function love.update(dt)
   -- elapsed since the last update cycle, which helps your
   -- make your game smooth and consistant across al performance.
 -- Created a scrolling background
+if activeScreen == screens.MENU or activeScreen == screens.GAME then
   scrollbackground(dt)
+end
   -- Controls the player up and down
   if activeScreen == screens.GAME then
     if love.keyboard.isDown("w") and player.y > 200 then
@@ -59,6 +66,15 @@ function love.update(dt)
 -- scrolls objects across screen --
   for i, o in pairs(obstacles) do
     o.x = o.x - 1 * o.speed * dt
+    if lib.checkCollision(player, o) then
+      activeScreen = screens.SCORES
+      music:stop()
+      music_scores:play()
+    end
+    if o.x < -65 then
+      table.remove(obstacles, i)
+      score = score + 1
+    end
   end
 
 
@@ -71,20 +87,31 @@ function love.draw()
   -- any draw-related function won't do anything if its elsewhere
   -- avoid putting game logic in here - only draw calls
   -- draws the background
-  drawBackGrounds()
+
+  if activeScreen == screens.MENU or activeScreen == screens.GAME then
+    drawBackGrounds()
+  end
+  drawButton()
   if activeScreen == screens.MENU then
     drawScoreWindow()
     drawPLayer(216,10,27)
     drawScore()
-    drawButton()
   end
   if activeScreen == screens.GAME then
-
+    love.graphics.setNewFont(30)
+    love.graphics.print(score, 10, 10)
+    love.graphics.print(test, 50, 50) -- TEST
     drawPLayer(216,10,27)
+
 -- For drawing the obstacles --
     for i, o in pairs(obstacles) do
       love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
     end
+  end
+  if activeScreen == screens.SCORE then
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", 0, 0, 200, 200)
+    drawPLayer(216,10,27)
   end
 
 end
@@ -102,7 +129,7 @@ function love.keypressed(key, scancode, isrepeat)
 end
 -- Mouse Pressed Events --
 function love.mousepressed(x, y, button, isTouch)
-  toggleSound(x,y,button)
+    toggleSound(x,y,button)
 end
 
 -- Spawn the obstacle
@@ -113,6 +140,7 @@ function spawnObstacle()
   obstacle.h = 15
   obstacle.w = 60
   obstacle.speed = love.math.random(350, 600)
+  obstacle.dead = false
 
   obstacle.y = love.math.random(200, 500)
   obstacle.x = love.graphics.getWidth() - 120
@@ -128,19 +156,31 @@ end
 
 -- toggles sound for the game
 function toggleSound(x,y,button)
-  if mouseButtonClick(x,y,button) then
-    if music:isPlaying() then
-      music:pause()
-      soundButton.text = "Sound OFF"
-    else
-      music:setVolume(0.6)
-      music:play()
-      soundButton.text = "Sound ON"
+  if activeScreen == screens.MENU or activeScreen == screens.GAME then
+    if mouseButtonClick(x,y,button) then
+      if music:isPlaying() then
+        music:pause()
+        soundButton.text = "Sound OFF"
+      else
+        music:setVolume(0.6)
+        music:play()
+        soundButton.text = "Sound ON"
+      end
+    end
+  end
+  if activeScreen == screens.SCORES then
+    if mouseButtonClick(x,y,button) then
+      if music_scores:isPlaying() then
+        music_scores:pause()
+        soundButton.text = "Sound OFF"
+      else
+        music_scores:setVolume(0.6)
+        music_scores:play()
+        soundButton.text = "Sound ON"
+      end
     end
   end
 end
-
-
 -- checker for button clicked
 function mouseButtonClick(x,y,button)
   if button == 1 then
@@ -160,9 +200,13 @@ function drawBackGrounds()
 end
 -- Draws button
 function drawButton()
+  love.graphics.push()
+  love.graphics.setNewFont(20)
+  love.graphics.setColor(1, 1, 1)
   love.graphics.rectangle('fill', soundButton.x, soundButton.y, soundButton.w, soundButton.h)
   love.graphics.setColor(0, 0, 0)
   love.graphics.print(soundButton.text, soundButton.x +5, soundButton.y+5)
+  love.graphics.pop()
 end
 
 -- Draws the player
@@ -204,7 +248,7 @@ end
 
 -- Scrolls background --
 function scrollbackground(dt)
-  if activeScreen == screens.MENU or screens.GAME then
+
     -- Scrolling Background 1 --
     testBackGround2.x = testBackGround2.x - 1 * backgroundSpeed * dt
     if testBackGround2.x <= 0 then
@@ -216,5 +260,5 @@ function scrollbackground(dt)
     if testBackGround.x <= -testBackGround.w then
       testBackGround.x = 0
     end
-  end
+
 end
