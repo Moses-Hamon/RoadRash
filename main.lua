@@ -29,7 +29,9 @@ player.y = 400
 player.h = 20
 player.w = 100
 player.speed = 300
-
+player.name = ""
+-- Obstacle Speeds
+diagonalSpeed = 100
 -- Sound button
 soundButton = {x=670, y=10, w=120, h=30, text="Sound ON"}
 -- scoreboard
@@ -66,6 +68,7 @@ end
 -- scrolls objects across screen --
   for i, o in pairs(obstacles) do
     o.x = o.x - 1 * o.speed * dt
+    randomMovement(o, dt)
     if lib.checkCollision(player, o) then
       activeScreen = screens.SCORES
       music:stop()
@@ -80,7 +83,25 @@ end
 
 end
 ----------------------------------------------------------------------END OF love.UPDATE------------------------------------------------------------------
+function randomMovement(self, dt)
 
+  -- select a direction
+  if self.direction == 1 then
+    -- if it's still in the road
+    if self.y < 500 then
+      self.y = self.y + 1 * diagonalSpeed * dt
+    else
+      self.direction = 2
+    end
+  elseif self.direction == 2 then
+    if self.y > 200 then
+      self.y = self.y - 1 * diagonalSpeed * dt
+    else
+      self.direction = 1
+    end
+  end
+
+end
 function love.draw()
     -- use this function for anything to do with drawing
   -- (putting stuff on the screen)
@@ -93,7 +114,7 @@ function love.draw()
   end
   drawButton()
   if activeScreen == screens.MENU then
-    drawScoreWindow()
+    drawScoreWindow(300)
     drawPLayer(216,10,27)
     drawScore()
   end
@@ -108,10 +129,14 @@ function love.draw()
       love.graphics.rectangle("fill", o.x, o.y, o.w, o.h)
     end
   end
-  if activeScreen == screens.SCORE then
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.rectangle("fill", 0, 0, 200, 200)
+
+  if activeScreen == screens.SCORES then
+    drawScoreWindow(150)
+    player.y = 450
+    player.x = 325
     drawPLayer(216,10,27)
+    drawScore()
+    love.graphics.print(player.name, 150, 150, r, sx, sy, ox, oy, kx, ky)
   end
 
 end
@@ -126,10 +151,30 @@ function love.keypressed(key, scancode, isrepeat)
   if activeScreen == screens.GAME then
     gameKeypressed(key)
   end
+  if activeScreen == screens.SCORES then
+    scoresKeypressed(key)
+  end
 end
 -- Mouse Pressed Events --
 function love.mousepressed(x, y, button, isTouch)
     toggleSound(x,y,button)
+end
+-- Keypressed for Scores Screens
+function scoresKeypressed(key)
+  if key == "return" then
+    if player.name ~= "" then
+          append_score(score, player.name)
+          resetGame()
+          activeScreen = 1
+
+    end
+  end
+end
+--Key events for entering Name
+function love.textinput(text)
+  if activeScreen == screens.SCORES then
+    player.name = player.name .. text
+  end
 end
 
 -- Spawn the obstacle
@@ -141,6 +186,7 @@ function spawnObstacle()
   obstacle.w = 60
   obstacle.speed = love.math.random(350, 600)
   obstacle.dead = false
+  obstacle.direction = love.math.random(0, 3)
 
   obstacle.y = love.math.random(200, 500)
   obstacle.x = love.graphics.getWidth() - 120
@@ -208,7 +254,20 @@ function drawButton()
   love.graphics.print(soundButton.text, soundButton.x +5, soundButton.y+5)
   love.graphics.pop()
 end
-
+--resets player stats--
+function resetGame()
+  player = {}
+  player.x = 150
+  player.y = 400
+  player.h = 20
+  player.w = 100
+  player.speed = 300
+  player.name = ""
+  score = 0
+  music_scores:stop()
+  music:play()
+  read_scores()
+end
 -- Draws the player
 function drawPLayer(r, b, g)
   love.graphics.push()
@@ -218,10 +277,10 @@ function drawPLayer(r, b, g)
 end
 
 -- Draws the window for displaying HIGHSCORES
-function drawScoreWindow()
+function drawScoreWindow(height)
   love.graphics.push()
   love.graphics.setColor(61/255, 121/255, 219/255)
-  love.graphics.rectangle("fill", 50, 50, 650, 300)
+  love.graphics.rectangle("fill", 50, 50, 650, height)
   love.graphics.pop()
 end
 -- Draws the scoreboard
@@ -231,19 +290,27 @@ function drawScore()
   -- will show different title for MENU
   if activeScreen == screens.MENU then
     heading = "HIGHSCORES"
-  else
+    -- Print Scores
+    love.graphics.push()
+    love.graphics.setNewFont(20)
+    love.graphics.setColor(208/255, 122/255, 8/255)
+    love.graphics.print(scoreboard, 60, 100)
+    love.graphics.pop()
+  elseif activeScreen == screens.SCORES then
     heading = "YOUR SCORE WAS"
+    love.graphics.push()
+    love.graphics.setNewFont(40)
+    love.graphics.setColor(17/255, 168/255, 6/255)
+    love.graphics.print("Your Score: " .. score, 200, 80)
+    love.graphics.pop()
   end
   -- Prints Title
   love.graphics.push()
   love.graphics.setNewFont(40)
   love.graphics.setColor(17/255, 168/255, 6/255)
   love.graphics.print(heading, 200, 60)
-  -- Print Scores
-  love.graphics.setNewFont(20)
-  love.graphics.setColor(208/255, 122/255, 8/255)
-  love.graphics.print(scoreboard, 60, 100)
   love.graphics.pop()
+
 end
 
 -- Scrolls background --

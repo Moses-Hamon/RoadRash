@@ -1,7 +1,8 @@
+local serialise = require("ser")
 ----------------------------------------------------------------------SCORE MANAGER------------------------------------------------------------------
 function append_score(score, player)
   -- load file contents
-  score_table = love.filesystem.load("score.txt")
+  local score_table = love.filesystem.load("score.txt")
   --If we got data
   if score_table ~= nil then
     --Deserialise the score_table
