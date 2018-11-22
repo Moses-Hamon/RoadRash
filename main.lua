@@ -8,7 +8,10 @@ function love.load(arg)
   -- use it for once off loading and configuration like
   -- loading assets (sounds, images, etc)
   -- think of it like a constructor
-
+--Sprites
+sprites = {}
+sprites.background1 = love.graphics.newImage("Background1.png")
+sprites.player = { player1 = love.graphics.newImage("player1.png") }
   --Background--
   backgroundSpeed = 150
   testBackGround = {x=0,y=0,h=600,w=800}
@@ -16,6 +19,10 @@ function love.load(arg)
   -- Game Music --
 music_scores = love.audio.newSource("bensound_sadday.mp3", "stream")
 music = love.audio.newSource("Shaolin_Dub_Hermes.mp3", "stream")
+soundEffects = {
+  crash = love.audio.newSource("Car_Screech_And_Crash_SoundBible.com-1414562045.wav", "static"),
+  turn = love.audio.newSource("Bronx_Cheer_SoundBible.com_524243477.wav", "static")
+}
 -- table for holding all obstacles
 obstacles = {}
 --Game Screens
@@ -27,11 +34,14 @@ player = {}
 player.x = 150
 player.y = 400
 player.h = 20
-player.w = 100
+player.w = 115
 player.speed = 300
 player.name = ""
 -- Obstacle Speeds
 diagonalSpeed = 100
+--Obstacle spawn time
+maxTime = 2
+timer = maxTime
 -- Sound button
 soundButton = {x=670, y=10, w=120, h=30, text="Sound ON"}
 -- scoreboard
@@ -72,36 +82,44 @@ end
     if lib.checkCollision(player, o) then
       activeScreen = screens.SCORES
       music:stop()
+      soundEffects.crash:play()
       music_scores:play()
+      resetObstacles()
     end
     if o.x < -65 then
-      table.remove(obstacles, i)
+      o.dead = true
       score = score + 1
+    end
+    --removes dead obstacles
+    if o.dead == true then
+      table.remove(obstacles, i)
     end
   end
 
+  --Spawns obstacles
+  if activeScreen == screens.GAME then
+    timer = timer - dt
+    if timer <= 0 then
+      spawnObstacle()
+      if maxTime > 1 then
+        maxTime = maxTime * 0.75
+      elseif maxTime > 0.5 then
+        maxTime = maxTime * 0.90
+      else
+        maxTime = maxTime * 0.95
+      end
+      if maxTime > 0.15 then
+        timer = maxTime
+      else
+        timer = 0.15
+      end
+
+    end
+  end
 
 end
 ----------------------------------------------------------------------END OF love.UPDATE------------------------------------------------------------------
-function randomMovement(self, dt)
 
-  -- select a direction
-  if self.direction == 1 then
-    -- if it's still in the road
-    if self.y < 500 then
-      self.y = self.y + 1 * diagonalSpeed * dt
-    else
-      self.direction = 2
-    end
-  elseif self.direction == 2 then
-    if self.y > 200 then
-      self.y = self.y - 1 * diagonalSpeed * dt
-    else
-      self.direction = 1
-    end
-  end
-
-end
 function love.draw()
     -- use this function for anything to do with drawing
   -- (putting stuff on the screen)
@@ -120,8 +138,7 @@ function love.draw()
   end
   if activeScreen == screens.GAME then
     love.graphics.setNewFont(30)
-    love.graphics.print(score, 10, 10)
-    love.graphics.print(test, 50, 50) -- TEST
+    love.graphics.print("Score:  " .. score, 10, 10)
     drawPLayer(216,10,27)
 
 -- For drawing the obstacles --
@@ -136,9 +153,8 @@ function love.draw()
     player.x = 325
     drawPLayer(216,10,27)
     drawScore()
-    love.graphics.print(player.name, 150, 150, r, sx, sy, ox, oy, kx, ky)
+    love.graphics.print(player.name, 200, 150)
   end
-
 end
 ----------------------------------------------------------------------END OF love.DRAW------------------------------------------------------------------
 
@@ -163,17 +179,21 @@ end
 function scoresKeypressed(key)
   if key == "return" then
     if player.name ~= "" then
-          append_score(score, player.name)
-          resetGame()
-          activeScreen = 1
-
+        append_score(score, player.name)
+        resetGame()
+        activeScreen = 1
     end
+  end
+  -- deletes the characters from name
+  if key == "backspace" then
+      player.name = player.name:sub(1,-2)
   end
 end
 --Key events for entering Name
 function love.textinput(text)
   if activeScreen == screens.SCORES then
     player.name = player.name .. text
+
   end
 end
 
@@ -194,11 +214,40 @@ function spawnObstacle()
 table.insert(obstacles, obstacle)
 end
 function gameKeypressed(key)
-  if key == "space" then
-    spawnObstacle()
+  if key == "w" or key == "s" then
+    if soundEffects.turn:isPlaying() then
+      soundEffects.turn:stop()
+      soundEffects.turn:play()
+    else
+      soundEffects.turn:play()
+    end
+  end
+end
+--sets all obstacles to dead
+function resetObstacles()
+  for i, o in pairs(obstacles) do
+    o.dead = true
   end
 end
 
+-- random movement for obstacles
+function randomMovement(self, dt)
+  -- select a direction
+  if self.direction == 1 then
+    -- if it's still in the road
+    if self.y < 500 then
+      self.y = self.y + 1 * diagonalSpeed * dt
+    else
+      self.direction = 2
+    end
+  elseif self.direction == 2 then
+    if self.y > 200 then
+      self.y = self.y - 1 * diagonalSpeed * dt
+    else
+      self.direction = 1
+    end
+  end
+end
 
 -- toggles sound for the game
 function toggleSound(x,y,button)
@@ -238,11 +287,9 @@ function mouseButtonClick(x,y,button)
 end
 -- Draws brackgrounds
 function drawBackGrounds()
-  love.graphics.setColor(1, 0, 1)
-  love.graphics.rectangle("fill", testBackGround.x, testBackGround.y, testBackGround.w, testBackGround.h)
-  love.graphics.setColor(1, 1, 0)
-  love.graphics.rectangle("fill", testBackGround2.x, testBackGround2.y, testBackGround2.w, testBackGround2.h)
-  love.graphics.print(xcoord, 100, 100)
+  love.graphics.reset()
+  love.graphics.draw(sprites.background1,testBackGround.x, testBackGround.y)
+  love.graphics.draw(sprites.background1,testBackGround2.x, testBackGround2.y)
 end
 -- Draws button
 function drawButton()
@@ -267,13 +314,16 @@ function resetGame()
   music_scores:stop()
   music:play()
   read_scores()
+  maxTime = 2
 end
 -- Draws the player
-function drawPLayer(r, b, g)
-  love.graphics.push()
-  love.graphics.setColor(r/255, b/255, g/255)
+function drawPLayer()
+  love.graphics.reset()
   love.graphics.rectangle("fill", player.x, player.y, player.w, player.h)
-  love.graphics.pop()
+  love.graphics.draw(sprites.player.player1, player.x, player.y, 0, 0.5, 0.5, 0, 140)
+  love.graphics.setColor(0, 0, 0)
+
+
 end
 
 -- Draws the window for displaying HIGHSCORES
@@ -301,7 +351,7 @@ function drawScore()
     love.graphics.push()
     love.graphics.setNewFont(40)
     love.graphics.setColor(17/255, 168/255, 6/255)
-    love.graphics.print("Your Score: " .. score, 200, 80)
+    love.graphics.print("Your Score: " .. score, 200, 100)
     love.graphics.pop()
   end
   -- Prints Title
@@ -323,7 +373,6 @@ function scrollbackground(dt)
     end
     -- Scrolling Background 2 --
     testBackGround.x = testBackGround.x - 1 *backgroundSpeed * dt
-    xcoord = testBackGround.x
     if testBackGround.x <= -testBackGround.w then
       testBackGround.x = 0
     end

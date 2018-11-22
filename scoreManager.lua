@@ -28,7 +28,7 @@ function read_scores()
     scoreboard = ""
 
     for i, entry in ipairs(score_table) do
-      scoreboard = scoreboard .. "Score " .. entry.score .. "Name: " .. entry.player .. "\n"
+      scoreboard = scoreboard .. "Name: " .. entry.player .. "  Score: " .. entry.score .."\n"
     end
   end
 end
